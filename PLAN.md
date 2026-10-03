@@ -1,6 +1,6 @@
 # TWASE macOS port – plan
 
-Status: draft, 2026-10-03. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
+Status: 2026-10-03. Phase 0.1–0.4 and Phase 1 done, Phase 2 addresses found, Lua log capture working. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
 
 ## 1. What we are porting *to* (findings)
 
@@ -110,7 +110,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
   1. `mach_vm_protect(RW|VM_PROT_COPY)` → write → `RX` + `sys_icache_invalidate`
   2. copy the page to `mmap` anonymous memory → `RX` → `mach_vm_remap(VM_FLAGS_OVERWRITE)` over the original (relies on `allow-unsigned-executable-memory`)
 
-  Use method 1 by default and keep method 2 as the fallback in `Memory.cpp`. Still to confirm: an actual inline hook on a hot gameplay function (with the Phase 1 hook library).
+  `Memory.cpp` uses method 2 by default (the remap swaps the page atomically, so other threads never see it non-executable) and falls back to method 1. ✅ A Dobby inline hook on `luaL_loadbuffer` works in the real game (22 loads traced in the frontend).
 
   The two runs that ended before the 30 s mark were quit manually. All runs started cleanly.
 - [ ] 0.5 **Metal overlay.** Swizzle present and draw the ImGui demo window over the game (windowed and fullscreen).
@@ -118,14 +118,17 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 ### Phase 1: skeleton
 
-- [ ] `xmake.lua`: `libTWASE.dylib` (C++23 + `.mm`), arm64, packages spdlog/fmt/toml11/imgui (metal+osx)/dobby; post-build copy to `TWASE/`.
-- [ ] Port `Config`, `Paths`, logging, `Utils`, and `SemVer`; Mach-O `Image` with an `LC_UUID` check; `Hook<T>` + `PatchBytes` on Dobby / `mach_vm_protect`.
-- [ ] Launcher (`twase-launch.command` or a small CLI) + install instructions, including `xattr -dr com.apple.quarantine` and ad-hoc `codesign -s -` for downloaded builds.
+- [x] `xmake.lua`: `libTWASE.dylib` (C++23), arm64, packages spdlog/fmt/toml11/dobby; post-build copy of the dylib to `TWASE/` and the launcher to the game root. Links Foundation so dyld initializes it before our constructor.
+- [x] Port `Config`, `Paths`, logging, `Utils`; Mach-O `Image` with an `LC_UUID` check (hooks disabled on unknown builds); `Hook<T>` on Dobby + `Memory::PatchBytes`. (`SemVer` not needed yet.)
+  - Lesson: never call `CFBundleGetValueForInfoDictionaryKey` (or anything else that goes through Foundation's localization) from the constructor. It recursed forever before Foundation was initialized.
+- [x] Launcher `scripts/twase-launch.command` (deployed to the game root).
+- [ ] Install instructions, including `xattr -dr com.apple.quarantine` and ad-hoc `codesign -s -` for downloaded builds (Phase 6 README).
 
 ### Phase 2: Lua core
 
-- [ ] Find the 12 Lua API functions, LuaLog, `g_RuntimeLuaList{Head,Sentinel}`, and `GetLuaState`; re-derive `ScriptRuntime` / `RuntimeLuaNode`.
-- [ ] Port `LuaRuntime`, `LuaGameEnvironment`, and the LuaLog hook. Done when Lua log lines show up in `TWASE/logs`.
+- [x] Find the 12 Lua API functions, LuaLog, `g_RuntimeLuaList{Head,Sentinel}`, and `GetLuaState`; re-derive `ScriptRuntime` / `RuntimeLuaNode` (see `docs/addresses.md`). Watch out: the binary has two Lua copies, and the game uses the one at `0x103f…`.
+- [x] LuaLog: a data hook on the sink pointer + a `nop` in its setter. Lua log lines show up in `TWASE/logs`.
+- [ ] Port `LuaRuntime` and `LuaGameEnvironment`.
 
 ### Phase 3: console
 
@@ -138,7 +141,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 ### Phase 5: tweaks + patches
 
 - [ ] Diplomacy deal-score tooltip (char16_t `WString`, new UI offsets).
-- [ ] Unit-size patch: the same bitset<64> throw exists on Mac (found statically, see `docs/addresses.md`). The patch is one `b.eq` retarget at `0x1A51C58`. Still to do: reproduce the crash with Fireforged Empire; code patching is confirmed to work (0.4).
+- [x] Unit-size patch: the same bitset<64> throw exists on Mac. TWASE applies the one-instruction `b.eq` retarget at `0x101a51c58` (applied OK in the game). Still to do: confirm with Fireforged Empire that the crash is gone.
 - [ ] Mod list logging from Feral's mod config.
 
 ### Phase 6: release
