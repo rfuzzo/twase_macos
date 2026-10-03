@@ -6,10 +6,14 @@
 #include "Version.hpp"
 #include "Patches/Patches.hpp"
 
+#include "Hooks/GameTick.hpp"
 #include "Hooks/LuaLoadTrace.hpp"
+#include "Hooks/MetalHook.hpp"
 #include "Hooks/SetLuaLogger.hpp"
 
 #include "../sdk/Attila/Addresses.hpp"
+#include "../sdk/Attila/Lua/LuaGameEnvironment.hpp"
+#include "../sdk/Attila/Lua/LuaRuntime.hpp"
 
 #include <crt_externs.h>
 #include <thread>
@@ -142,8 +146,20 @@ bool App::AttachHooks()
 {
     spdlog::info("Attaching hooks...");
 
+    // Resolve Lua function pointers (non-hooked, called directly)
+    const auto slide = Image::Get()->GetSlide();
+    LuaRuntime::Init(slide);
+    LuaGameEnvironment::Init(slide);
+
     auto success = Hooks::LuaLogHook::Attach();
     success &= Hooks::LuaLoadTraceHook::Attach();
+    success &= Hooks::GameTickHook::Attach();
+
+    // the console is optional, TWASE still works without it
+    if (!Hooks::MetalHook::Attach())
+    {
+        spdlog::warn("Metal hook failed – Lua console will not be available");
+    }
 
     return success;
 }

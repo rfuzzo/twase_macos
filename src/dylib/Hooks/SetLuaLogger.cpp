@@ -6,6 +6,7 @@
 #include "../Config.hpp"
 #include "../Image.hpp"
 #include "../Hooking/Memory.hpp"
+#include "../UI/LuaConsole.hpp"
 
 #include "../../sdk/Attila/Addresses.hpp"
 
@@ -40,7 +41,11 @@ void ScriptLog(const char* aText)
             // don't log empty lines
             if (pos > 0)
             {
-                spdlog::debug("[Lua] {}", std::string_view(line).substr(0, pos));
+                auto text = std::string_view(line).substr(0, pos);
+                spdlog::debug("[Lua] {}", text);
+
+                // also echo into the ImGui console
+                LuaConsole::Get().AddLog(LuaConsole::LogLevel::Info, "%.*s", static_cast<int>(text.size()), text.data());
             }
 
             line.erase(0, pos + 1);

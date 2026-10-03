@@ -1,6 +1,6 @@
 # TWASE macOS port – plan
 
-Status: 2026-10-03. Phase 0.1–0.4 and Phase 1 done, Phase 2 addresses found, Lua log capture working. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
+Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Next: Phase 4 (mod loader). Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
 
 ## 1. What we are porting *to* (findings)
 
@@ -103,7 +103,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 - [ ] 0.3 **Injection.** A hello-world dylib whose constructor writes a log line (`spikes/inject`). Test:
   - (a) ✅ Running the binary directly with `DYLD_INSERT_LIBRARIES` while Steam is running works. The dylib loads (ad-hoc signed, from outside the bundle), there is no Steam relaunch, and `SteamAPI_Init` is OK. Code-signing flags in the process: `VALID HARD KILL RUNTIME`. Note: with injection, dyld image 0 is *our* dylib; find the game by `MH_EXECUTE`.
   - (b) Steam launch options `DYLD_INSERT_LIBRARIES=… %command%`
-  - (c) a launcher script
+  - (c) ✅ launcher script `scripts/twase-launch.command`
 
   Watch for macOS stripping `DYLD_*` when a SIP-protected binary such as `/bin/sh` sits in the chain.
 - [x] 0.4 **Code patching under the hardened runtime.** ✅ Works without re-signing. `spikes/inject` rewrites the page holding the entry point (`main`, executed right after the constructors). Both methods ran without a kill or crash report (3/3 runs):
@@ -113,8 +113,8 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
   `Memory.cpp` uses method 2 by default (the remap swaps the page atomically, so other threads never see it non-executable) and falls back to method 1. ✅ A Dobby inline hook on `luaL_loadbuffer` works in the real game (22 loads traced in the frontend).
 
   The two runs that ended before the 30 s mark were quit manually. All runs started cleanly.
-- [ ] 0.5 **Metal overlay.** Swizzle present and draw the ImGui demo window over the game (windowed and fullscreen).
-- [ ] 0.6 **Input.** Does an `NSEvent` local monitor see game keystrokes, and does swallowing them stop the game from reacting? If not, find Feral's input path.
+- [x] 0.5 **Metal overlay.** ✅ Feral presents with `-[MTLCommandBuffer presentDrawable:]` (concrete class `AGXG16XFamilyCommandBuffer` on M4 Pro) on a render thread. TWASE swizzles it, found via `-[CAMetalLayer nextDrawable]`, and encodes ImGui into the drawable on the game's command buffer. No code patching involved.
+- [x] 0.6 **Input.** ✅ An `NSEvent` local monitor sees keys and mouse (only app/system events go through `sendEvent:`). Console key `kVK_ISO_Section` (0x0A) on ISO keyboards, `kVK_ANSI_Grave` on ANSI. Events are queued on the main thread and fed to ImGui on the render thread.
 
 ### Phase 1: skeleton
 
@@ -128,11 +128,13 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 - [x] Find the 12 Lua API functions, LuaLog, `g_RuntimeLuaList{Head,Sentinel}`, and `GetLuaState`; re-derive `ScriptRuntime` / `RuntimeLuaNode` (see `docs/addresses.md`). Watch out: the binary has two Lua copies, and the game uses the one at `0x103f…`.
 - [x] LuaLog: a data hook on the sink pointer + a `nop` in its setter. Lua log lines show up in `TWASE/logs`.
-- [ ] Port `LuaRuntime` and `LuaGameEnvironment`.
+- [x] Port `LuaRuntime` and `LuaGameEnvironment` (`Init` takes the ASLR slide).
 
 ### Phase 3: console
 
-- [ ] Metal + input hooks from the Phase 0 spikes; port `LuaConsole`, `Commands`, and `TweaksTab`. Done when `.contexts` and `.globals` work in campaign, battle, and frontend.
+- [x] Metal + input hooks; port `LuaConsole` and `Commands`. Works in frontend and campaign (battle not tested yet).
+- [x] **Threading (differs from PC):** game Lua runs on the `WinMain` thread, the overlay on the render thread. Console commands and the context list are queued and run in a hook on the per-frame `GameTick` (`0x1010ecd24`). The overlay only reads cached results.
+- [ ] `TweaksTab`: placeholder until the diplomacy tweak (Phase 5).
 
 ### Phase 4: mod loader
 

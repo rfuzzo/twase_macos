@@ -9,6 +9,10 @@ namespace sdk::Attila::Addresses
 // Feral 1.6.1 RC2 (CFBundleVersion 480285.103778)
 constexpr const char* SupportedUUID = "392D6F66-9183-329E-8A98-8C90FC828326";
 
+// GAME LOOP
+// bool (*)(void* app, int, int, int, int), called once per frame by the run loop on the WinMain (game/Lua) thread
+constexpr uint64_t GameTick = 0x1010ECD24;
+
 // LUA LOG
 // void (*)(const char*), called by print, out and the Lua error handler, falls back to fputs(stdout) if null
 constexpr uint64_t g_LuaLogSink = 0x1056D6588;

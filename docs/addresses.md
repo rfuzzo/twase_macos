@@ -64,6 +64,18 @@ struct RuntimeLuaNode  { RuntimeLuaNode* prev; RuntimeLuaNode* next; ScriptRunti
                          lua_State* baseL; int registry_ref; };                          // 0x28
 ```
 
+## Game loop (macOS only)
+
+Threads: Feral runs CA's `WinMain` on a secondary thread named `WinMain`, and **all game Lua runs on it**. Metal frames are presented from a separate render thread, AppKit events arrive on the main thread.
+
+| Name | Mac VA | Notes |
+|---|---|---|
+| GameTick | `0x1010ecd24` | `bool (void* app, int, int, int, int)`, called once per frame by `GameRunLoop`; returns true to stop. TWASE runs queued console commands after it |
+| GameRunLoop | `0x1010ca7bc` | frame limiting + `GameTick` loop |
+| GameOuterLoop | `0x1010c9c74` | `"Init completed"` → `GameRunLoop`, repeated |
+| GameMain | `0x1010ce77c` | |
+| WinMain | `0x1032bc10c` | `"Empire.CONFIGURATION_NAME.x64.dll"` |
+
 ## Patches
 
 | Name | PC RVA | Mac VA | Found via | Notes |

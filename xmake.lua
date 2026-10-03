@@ -12,7 +12,7 @@ add_rules("mode.debug", "mode.release")
 local gameroot = os.getenv("TWASE_GAMEROOT") or
     path.join(os.getenv("HOME"), "Library/Application Support/Steam/steamapps/common/Total War Attila")
 
-add_requires("fmt", "toml11", "dobby")
+add_requires("fmt", "toml11", "dobby", "imgui v1.91.8-docking")
 add_requires("spdlog", {configs = {fmt_external = true}})
 
 if is_mode("debug") then
@@ -31,19 +31,30 @@ target("twase")
     for _, dir in ipairs(os.dirs("src/dylib/*")) do
         add_files(path.join(dir, "*.cpp"))
         add_headerfiles(path.join(dir, "*.hpp"))
+        if #os.files(path.join(dir, "*.mm")) > 0 then
+            add_files(path.join(dir, "*.mm"), {mxflags = "-fobjc-arc"})
+        end
     end
     add_includedirs("src/dylib")
 
+    -- ImGui Metal backend (not built by the imgui package), manual reference counting
+    add_files("src/thirdparty/imgui_backends/*.mm")
+    add_includedirs("src/thirdparty/imgui_backends")
+
     -- sdk
     add_headerfiles("src/sdk/Attila/*.hpp")
+    for _, dir in ipairs(os.dirs("src/sdk/Attila/*")) do
+        add_files(path.join(dir, "*.cpp"))
+        add_headerfiles(path.join(dir, "*.hpp"))
+    end
 
     -- precompiled header
     set_pcxxheader("src/dylib/stdafx.hpp")
 
     -- links
-    add_packages("fmt", "spdlog", "toml11", "dobby")
+    add_packages("fmt", "spdlog", "toml11", "dobby", "imgui")
     -- Foundation makes dyld initialize it before our constructor runs
-    add_frameworks("CoreFoundation", "Foundation")
+    add_frameworks("CoreFoundation", "Foundation", "AppKit", "Carbon", "Metal", "QuartzCore")
 
     -- Post-build: copy libTWASE.dylib to <gameroot>/TWASE and the launcher to <gameroot>
     after_build(function (target)

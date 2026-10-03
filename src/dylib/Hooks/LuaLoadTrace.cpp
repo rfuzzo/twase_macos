@@ -4,6 +4,8 @@
 
 #include "../Hooking/Hook.hpp"
 
+#include <pthread.h>
+
 #include "../../sdk/Attila/Lua/Addresses.hpp"
 #include "../../sdk/Attila/Lua/LuaDefs.hpp"
 
@@ -19,8 +21,10 @@ int LoadBuffer(lua_State* L, const char* aBuffer, size_t aSize, const char* aNam
     auto result = LoadBuffer_fnc(L, aBuffer, aSize, aName);
 
     auto count = ++loadCount;
-    spdlog::trace("[LuaLoad] #{} {} ({} bytes, L {}) -> {}", count, aName ? aName : "(null)", aSize,
-                  static_cast<void*>(L), result);
+    uint64_t tid = 0;
+    pthread_threadid_np(nullptr, &tid);
+    spdlog::trace("[LuaLoad] #{} {} ({} bytes, L {}, thread {}{}) -> {}", count, aName ? aName : "(null)", aSize,
+                  static_cast<void*>(L), tid, pthread_main_np() ? " main" : "", result);
 
     return result;
 }
