@@ -9,6 +9,10 @@ namespace sdk::Attila::Addresses
 // Feral 1.6.1 RC2 (CFBundleVersion 480285.103778)
 constexpr const char* SupportedUUID = "392D6F66-9183-329E-8A98-8C90FC828326";
 
+// STARTUP
+// int64_t (*)(void* instance, void* prevInstance, const char16_t* commandLine), CA's WinMain on the WinMain thread
+constexpr uint64_t WinMain = 0x1032BC10C;
+
 // GAME LOOP
 // bool (*)(void* app, int, int, int, int), called once per frame by the run loop on the WinMain (game/Lua) thread
 constexpr uint64_t GameTick = 0x1010ECD24;

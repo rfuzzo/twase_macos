@@ -144,10 +144,11 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 - [ ] Diplomacy deal-score tooltip (char16_t `WString`, new UI offsets).
 - [x] Unit-size patch: the same bitset<64> throw exists on Mac. TWASE applies the one-instruction `b.eq` retarget at `0x101a51c58` (applied OK in the game). Still to do: confirm with Fireforged Empire that the crash is gone.
-- [ ] Mod list logging from Feral's mod config.
+- [x] Mod list logging: the `WinMain` hook logs the engine command line and the enabled mods.
 - [ ] Start the game with mods from the launcher script (to test the unit-size patch with Fireforged). Findings so far (2026-10-03):
   - Feral's preferences (`~/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data`, XML) have `DisableAllMods = 1` and a `mods` list. Loading a Fireforged save with mods disabled crashes on a missing DB record (not TWASE).
   - On Windows, Runcher writes `mod_list.txt` (`mod "x.pack";`, `add_working_directory "…";`) and starts `Attila.exe mod_list.txt;` (+ `game_startup_mode campaign_load <save>`). It doesn't support macOS.
+  - 2026-10-04: Feral builds the command line itself (`0x100022b7c`, mods via `0x100014f1c`) and does not forward process arguments; an extra `mod_list.txt;` argument stalls startup. Mods load once "Disable all mods" is off (packs are linked into `VFS/Local/mods`). Option: let the `WinMain` hook replace the `mod` entries with a Runcher-style `TWASE/mod_list.txt`.
   - The Mac binary still has CA's command-line keywords as UTF-16 strings (`add_working_directory`, `game_startup_mode`, `campaign_load`). Feral's game shell (`0x100f858f0`) starts the `WinMain` thread through `0x100020344`, which converts a string into the UTF-16 command line for `WinMain` (`0x1032bc10c`). Still to check: where that string comes from (`argv`?) and how Feral maps paths (Lua paths show a virtual `q:\feral\users\default\...` drive), then try `mod_list.txt;` as an argument.
 
 ### Phase 6: release

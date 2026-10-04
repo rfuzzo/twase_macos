@@ -9,6 +9,7 @@
 #include "Hooks/GameTick.hpp"
 #include "Hooks/LuaLoadTrace.hpp"
 #include "Hooks/MetalHook.hpp"
+#include "Hooks/WinMain.hpp"
 #include "Hooks/SetLuaLogger.hpp"
 
 #include "../sdk/Attila/Addresses.hpp"
@@ -154,6 +155,7 @@ bool App::AttachHooks()
     auto success = Hooks::LuaLogHook::Attach();
     success &= Hooks::LuaLoadTraceHook::Attach();
     success &= Hooks::GameTickHook::Attach();
+    success &= Hooks::WinMainHook::Attach();
 
     // the console is optional, TWASE still works without it
     if (!Hooks::MetalHook::Attach())

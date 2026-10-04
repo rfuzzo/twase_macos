@@ -74,7 +74,12 @@ Threads: Feral runs CA's `WinMain` on a secondary thread named `WinMain`, and **
 | GameRunLoop | `0x1010ca7bc` | frame limiting + `GameTick` loop |
 | GameOuterLoop | `0x1010c9c74` | `"Init completed"` → `GameRunLoop`, repeated |
 | GameMain | `0x1010ce77c` | |
-| WinMain | `0x1032bc10c` | `"Empire.CONFIGURATION_NAME.x64.dll"` |
+| WinMain | `0x1032bc10c` | `int64 (void* instance, void* prev, const char16_t* commandLine)`, `"Empire.CONFIGURATION_NAME.x64.dll"`. TWASE hooks it to log the command line |
+| BuildCommandLine | `0x100022b7c` | Feral: appends `gfx_fullscreen`, `x_pos`/`y_pos`, `x_res`/`y_res`, then the mods |
+| AppendModsToCommandLine | `0x100014f1c` | Feral: unless `DisableAllMods`, appends `mod <pack>;` for each enabled mod |
+| AppendCommandLine | `0x100c36ccc` | appends a statement (space separated) to the global command line string `0x10506c7b0` |
+
+Feral does **not** forward process arguments to the engine command line. Passing `mod_list.txt;` (Runcher style) made startup stall before `WinMain`.
 
 ## Patches
 
