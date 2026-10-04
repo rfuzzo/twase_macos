@@ -1,6 +1,6 @@
 # TWASE macOS port – plan
 
-Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Next: Phase 4 (mod loader). Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
+Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Phase 4 (mod loader) works for loose mods. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
 
 ## 1. What we are porting *to* (findings)
 
@@ -138,7 +138,8 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 ### Phase 4: mod loader
 
-- [ ] RunStartupPath, `VFS_GetInstance`, `VFS_SearchFiles`, `CName_ctor`, `tw_free`, and the `ScriptingEnv`/`TempString`/`VFSSearchResults` layouts. Done when `mods/*/scripting.lua` auto-loads.
+- [x] RunStartupPath, `VFS_GetInstance`, `VFS_SearchFiles` (a VFS virtual), `CName_ctor`, `tw_free`, and the 64-bit `ScriptingEnv`/`TempString`/`VFSSearchResults` layouts, cross-checked against RTTI (see `docs/addresses.md`). ✅ A loose `TotalWarAttilaData/data/campaigns/main_attila/mods/<name>/scripting.lua` auto-loads; Lua errors in a mod are caught and logged.
+- [ ] Test a mod inside a `.pack` and in Feral's user `maps` folder; document the local mod locations in the README.
 
 ### Phase 5: tweaks + patches
 

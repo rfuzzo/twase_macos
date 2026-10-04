@@ -9,12 +9,14 @@
 #include "Hooks/GameTick.hpp"
 #include "Hooks/LuaLoadTrace.hpp"
 #include "Hooks/MetalHook.hpp"
+#include "Hooks/RunStartupPath.hpp"
 #include "Hooks/WinMain.hpp"
 #include "Hooks/SetLuaLogger.hpp"
 
 #include "../sdk/Attila/Addresses.hpp"
 #include "../sdk/Attila/Lua/LuaGameEnvironment.hpp"
 #include "../sdk/Attila/Lua/LuaRuntime.hpp"
+#include "../sdk/Attila/VFS/VFS.hpp"
 
 #include <crt_externs.h>
 #include <libproc.h>
@@ -159,11 +161,13 @@ bool App::AttachHooks()
     const auto slide = Image::Get()->GetSlide();
     LuaRuntime::Init(slide);
     LuaGameEnvironment::Init(slide);
+    VFS::Init(slide);
 
     auto success = Hooks::LuaLogHook::Attach();
     success &= Hooks::LuaLoadTraceHook::Attach();
     success &= Hooks::GameTickHook::Attach();
     success &= Hooks::WinMainHook::Attach();
+    success &= Hooks::RunStartupPathHook::Attach();
 
     // the console is optional, TWASE still works without it
     if (!Hooks::MetalHook::Attach())

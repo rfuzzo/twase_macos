@@ -96,6 +96,35 @@ With mods enabled, Feral links every subscribed Workshop pack into `VFS/Local/mo
 |---|---|---|---|---|
 | BitSetCrashAddr (unit size patch) | `0x0091CB57` (`cmp edi,40h; jnb`) | `0x101a51c58` (`b.eq`) | xref to `"bitset test argument out of range"` (5 sites). Only this one has the `mov x8,#-1` mask → vcall(vtable+0x30, &mask) → list walk → `cmp x20,#0x40` shape | expected `40 26 00 54` (`b.eq 0x101a52120` → throw). Patch `80 00 00 54` (`b.eq 0x101a51c68`, include branch) |
 
+## Lua environment classes (from RTTI)
+
+The word before each vtable points to the class's `type_info`, which gives the real class names. All game Lua environments derive from `UTILITYDLL::LUA::LuaEnv` (the PC "ScriptInterface"), whose virtual slot 3 (pure) loads and runs the environment's startup script:
+
+| Class | vtable | Slot 3 | Notes |
+|---|---|---|---|
+| `UTILITYDLL::LUA::LuaEnv` | `0x104d14c90` | pure | base, 0x30 bytes, ctor `0x1038b3690` |
+| `EMPIRECAMPAIGN::EPISODIC_SCRIPTING_ENV` (+ `EMPIREUTILITY::KEY_CONTROLLED`) | `0x104bfa178` | `0x102170104` | the PC "ScriptingEnv": campaign `scripting.lua`, 0x78 bytes, ctor `0x10216fe40` |
+| `EMPIREUTILITY::EMPIRE_LUA_ENV` | `0x104c53b98` | `0x102c417c8` | `"EmpireLuaEnv"`, ctors `0x102c40904` / `0x102c40e04` install the log sink |
+| `FRONTEND::AUTORUN_SCRIPTING_ENV` | `0x104c6a470` | `0x10314d060` | frontend autorun |
+| `EMPIREBATTLE::BATTLE_EDITOR_SCRIPT_INTERFACE` | `0x104b5d568` | `0x10149e0c0` | |
+| `EMPIRECAMPAIGN::CAMPAIGN_UI_SCRIPT_INTERFACE`, `UIDLL::FRONTEND_UI_SCRIPT_INTERFACE` | `0x104cd3de8`, `0x104cde8b8` | stub `0x100023188` | bindings only |
+
+`EPISODIC_SCRIPTING_ENV` layout: `LuaEnv` `+0x00` (0x30), `KEY_CONTROLLED` `+0x30` (0x28, own vtable, offset-to-top −0x30), folder `+0x58` (`"campaigns/main_attila"`), script `+0x68` (`"campaigns/main_attila/scripting.lua"`). Strings are `{u32 length, u32 capacity, char* data}`. Same sequence as on Windows (0x18 + 0x1C + 0xC + 0xC = 0x4C), where the two path fields were labeled the other way round.
+
+## Mod loader (PC `RunStartupPath` hook)
+
+| Name | PC RVA | Mac VA | Notes |
+|---|---|---|---|
+| RunStartupPath | `0x79B980` | `0x102170104` | `void* (EPISODIC_SCRIPTING_ENV*)`, vtable slot 3; reads the script through the VFS, sets `package.path`, `luaL_loadbuffer`, runs it, names the state `"EpisodicScriptingEnv"`. Found via `"campaigns/%S/scripting.lua"` (`0x102182814`, `0x102184538` build the paths and construct the env) |
+| VFS_GetInstance | `0x1658C80` | `0x10387c0a8` | returns the static VFS object `0x1055b84e0` |
+| VFS_SearchFiles | `0x1635B50` | VFS vtable `+0x58` | `(vfs, const CName* dir, const CName* pattern, VFSSearchResults*, flags, 3)`; dir/pattern **by reference** (PC: pooled `char*` by value). The game passes flags 0 for one folder; TWASE uses 1 (with sub folders) |
+| CName_ctor | `0xDF290` | `0x10109240c` | `(CName*, const char*)` |
+| tw_free | `0xE98C0` | `0x1010acb70` | game allocator free (`tw_malloc` `0x1010aca70`) |
+
+`VFSSearchResults` = `{u32 capacity, u32 count, VFSEntry** entries}`; `VFSEntry` has the UTF-8 path at `+0x08` (backslashes, e.g. `campaigns\main_attila\mods\x\scripting.lua`).
+
+Tested 2026-10-04: a loose mod in `TotalWarAttilaData/data/campaigns/main_attila/mods/<name>/scripting.lua` is found and `require`d. The require resolved through Feral's user folder (`q:\feral\users\default\appdata\roaming\the creative assembly\attila\maps\…`), so Feral merges that folder with `data`; mods there may work too (untested).
+
 ## Still to find
 
-`RunStartupPath`, `VFS_GetInstance`, `VFS_SearchFiles`, `CName_ctor`, `tw_free`, `ScriptingEnv` path fields (Phase 4); diplomacy and UI functions/offsets (Phase 5).
+Diplomacy and UI functions/offsets (Phase 5).
