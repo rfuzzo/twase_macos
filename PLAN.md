@@ -1,6 +1,6 @@
 # TWASE macOS port – plan
 
-Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Phase 4 (mod loader) and Phase 5 (diplomacy tweak, unit-size patch) work. Next: Phase 6 (release). Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
+Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Phase 4 (mod loader) and Phase 5 (diplomacy tweak, unit-size patch) work. Phase 6: CI and README done, waiting for the first CI run and a release tag. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
 
 ## 1. What we are porting *to* (findings)
 
@@ -155,8 +155,10 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 ### Phase 6: release
 
-- [ ] GitHub Actions on `macos-14`/`macos-15` (arm64): build, ad-hoc sign, zip `TWASE/libTWASE.dylib` + launcher; nightly + `v*` tags as on PC.
-- [ ] README (macOS install, Steam launch options, troubleshooting `Code Signature Invalid`).
+- [x] GitHub Actions on `macos-15` (arm64): build, ad-hoc sign, zip `TWASE/libTWASE.dylib` + launcher; nightly on `main`, versioned release on `v*` tags (tag must match `TWASE_VERSION_STR`), as on PC. Packaging dry-run passed locally.
+- [x] README for players: install, quarantine removal, launcher options, console, mod locations, config, troubleshooting.
+  - Tested: a quarantined (downloaded) dylib is refused ("library load disallowed by system policy") and the game aborts. The launcher now removes the quarantine from `TWASE/` itself; the README has a one-time `xattr` command for the launcher script.
+- [ ] First CI run on GitHub, then tag `v0.1.0`.
 
 ## 6. Proposed repo layout
 

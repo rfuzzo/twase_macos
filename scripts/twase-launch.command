@@ -46,6 +46,12 @@ done
 [ -x "$game" ] || die "Total War ATTILA not found at: $game"
 [ -f "$dylib" ] || die "TWASE not found at: $dylib"
 
+# macOS refuses to load a downloaded (quarantined) dylib ("library load disallowed by system policy")
+if xattr "$dylib" 2>/dev/null | grep -q com.apple.quarantine; then
+    echo "twase-launch: removing the download quarantine from $root/TWASE"
+    xattr -dr com.apple.quarantine "$root/TWASE" || die "could not remove the quarantine, run: xattr -dr com.apple.quarantine \"$root/TWASE\""
+fi
+
 # Feral writes its preferences when the game quits, never edit them while it runs
 if pgrep -f "$game" >/dev/null 2>&1; then
     die "Total War ATTILA is already running"
