@@ -17,6 +17,8 @@
 #include "../sdk/Attila/Lua/LuaRuntime.hpp"
 
 #include <crt_externs.h>
+#include <libproc.h>
+#include <unistd.h>
 #include <thread>
 
 namespace
@@ -74,6 +76,12 @@ App::App()
     spdlog::info("Game version: {} (build {})", image->GetVersion(), image->GetBuild());
     spdlog::info("Executable UUID: {}", image->GetUUID());
     spdlog::debug("ASLR slide: {:#x}", image->GetSlide());
+
+    // who started us (twase-launch.command, Steam, ...)
+    const auto parent = getppid();
+    char parentPath[PROC_PIDPATHINFO_MAXSIZE] = {};
+    proc_pidpath(parent, parentPath, sizeof(parentPath));
+    spdlog::info("Process {} started by {} ({})", getpid(), parent, parentPath[0] ? parentPath : "unknown");
 
     // Display commandline arguments
     auto argc = *_NSGetArgc();

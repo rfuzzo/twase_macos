@@ -143,7 +143,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 ### Phase 5: tweaks + patches
 
 - [ ] Diplomacy deal-score tooltip (char16_t `WString`, new UI offsets).
-- [x] Unit-size patch: the same bitset<64> throw exists on Mac. TWASE applies the one-instruction `b.eq` retarget at `0x101a51c58` (applied OK in the game). Still to do: confirm with Fireforged Empire that the crash is gone.
+- [x] Unit-size patch: the same bitset<64> throw exists on Mac. TWASE applies the one-instruction `b.eq` retarget at `0x101a51c58`. 2026-10-04: a Fireforged Empire save loads and plays fine with the patch (whether the >64 case was hit isn't logged).
 - [x] Mod list logging: the `WinMain` hook logs the engine command line and the enabled mods.
 - [ ] Start the game with mods from the launcher script (to test the unit-size patch with Fireforged). Findings so far (2026-10-03):
   - Feral's preferences (`~/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data`, XML) have `DisableAllMods = 1` and a `mods` list. Loading a Fireforged save with mods disabled crashes on a missing DB record (not TWASE).
