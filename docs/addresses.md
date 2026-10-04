@@ -79,7 +79,16 @@ Threads: Feral runs CA's `WinMain` on a secondary thread named `WinMain`, and **
 | AppendModsToCommandLine | `0x100014f1c` | Feral: unless `DisableAllMods`, appends `mod <pack>;` for each enabled mod |
 | AppendCommandLine | `0x100c36ccc` | appends a statement (space separated) to the global command line string `0x10506c7b0` |
 
-Feral does **not** forward process arguments to the engine command line. With an extra argument (e.g. Runcher's `mod_list.txt;`), Feral opens its pre-launcher (mod manager) and waits there; without arguments it starts the game directly.
+Feral builds the engine command line itself; process arguments are not part of it. Feral's preferences (`~/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data`, XML, edit only while the game is closed) control it instead (verified 2026-10-04):
+
+| Preference | Effect |
+|---|---|
+| `GameOptionsDialogShouldShow` = 0 | skips Feral's pre-launcher (game options dialog / mod manager), the game starts directly |
+| `ExtraCommandLineEnabled` = 1 + `ExtraCommandLine` = `"<statements>"` | appended at the end of the engine command line (`0x100c36624`), e.g. `mod <pack>;`, `game_startup_mode campaign_load <save>` |
+| `DisableAllMods` = 1 | Feral appends no `mod` entries of its own |
+| `Launcher/mods` | Feral's mod list: `<pack> = <timestamp>|<enabled>|<order>` |
+
+Feral links every subscribed Workshop pack into `VFS/Local/mods` (lowercased names) on each launch, which the game sees as `<install>\mods`.
 
 ## Patches
 
