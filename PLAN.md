@@ -158,7 +158,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 - [x] GitHub Actions on `macos-15` (arm64): build, ad-hoc sign, zip `TWASE/libTWASE.dylib` + launcher; nightly on `main`, versioned release on `v*` tags (tag must match `TWASE_VERSION_STR`), as on PC. Packaging dry-run passed locally.
 - [x] README for players: install, quarantine removal, launcher options, console, mod locations, config, troubleshooting.
   - Tested: a quarantined (downloaded) dylib is refused ("library load disallowed by system policy") and the game aborts. The launcher now removes the quarantine from `TWASE/` itself; the README has a one-time `xattr` command for the launcher script.
-- [ ] First CI run on GitHub, then tag `v0.1.0`.
+- [x] First CI run on GitHub (green, nightly published), released as `v1.0.0` (own versioning, feature parity with TWASE v1.0.0 for Windows).
 
 ## 6. Proposed repo layout
 
