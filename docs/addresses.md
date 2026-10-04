@@ -123,7 +123,15 @@ The word before each vtable points to the class's `type_info`, which gives the r
 
 `VFSSearchResults` = `{u32 capacity, u32 count, VFSEntry** entries}`; `VFSEntry` has the UTF-8 path at `+0x08` (backslashes, e.g. `campaigns\main_attila\mods\x\scripting.lua`).
 
-Tested 2026-10-04: a loose mod in `TotalWarAttilaData/data/campaigns/main_attila/mods/<name>/scripting.lua` is found and `require`d. The require resolved through Feral's user folder (`q:\feral\users\default\appdata\roaming\the creative assembly\attila\maps\…`), so Feral merges that folder with `data`; mods there may work too (untested).
+Tested 2026-10-04:
+
+| Mod location | Result |
+|---|---|
+| loose: `TotalWarAttilaData/data/campaigns/main_attila/mods/<name>/scripting.lua` | ✅ found and loaded |
+| inside a loaded `.pack`: `campaigns\main_attila\mods\<name>\scripting.lua` | ✅ found and loaded |
+| Feral's user folder `…/VFS/User/AppData/Roaming/The Creative Assembly/Attila/maps/…` | ❌ not searched by the VFS, and the game **empties that folder on every launch** |
+
+The game's `require` names chunks `q:\feral\users\default\appdata\roaming\the creative assembly\attila\maps\<path>` (it looks in that user folder first), but the content comes from the VFS (data / packs).
 
 ## Still to find
 

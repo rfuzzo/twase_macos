@@ -139,7 +139,8 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 ### Phase 4: mod loader
 
 - [x] RunStartupPath, `VFS_GetInstance`, `VFS_SearchFiles` (a VFS virtual), `CName_ctor`, `tw_free`, and the 64-bit `ScriptingEnv`/`TempString`/`VFSSearchResults` layouts, cross-checked against RTTI (see `docs/addresses.md`). ✅ A loose `TotalWarAttilaData/data/campaigns/main_attila/mods/<name>/scripting.lua` auto-loads; Lua errors in a mod are caught and logged.
-- [ ] Test a mod inside a `.pack` and in Feral's user `maps` folder; document the local mod locations in the README.
+- [x] Mods inside a `.pack` load too. Feral's user `maps` folder is not usable (not searched, and wiped on every launch).
+- [ ] Document the local mod locations in the README (Phase 6).
 
 ### Phase 5: tweaks + patches
 
