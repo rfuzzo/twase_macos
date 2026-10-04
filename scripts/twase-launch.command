@@ -1,20 +1,197 @@
 #!/bin/sh
 # Starts Total War: ATTILA with TWASE injected. Steam must be running.
 # Lives in the game root, next to "Total War ATTILA.app" and the TWASE folder.
+#
+# Usage: twase-launch.command [--skip-launcher] [--mods <mod_list.txt>] [--load <save>] [--extra "<statements>"]
+#
+#   --skip-launcher   start the game directly, without Feral's pre-launcher
+#   --mods <file>     load exactly the mods in a Runcher style mod list (lines like: mod "@my_mod.pack";)
+#                     instead of the mods enabled in Feral's mod manager
+#   --load <save>     load a campaign save on startup, e.g. --load "Saxons 395 AD Spring.save" (implies --skip-launcher)
+#   --extra <text>    append raw statements to the game's command line
+#
+# The game ignores its process arguments on macOS, so these options go through Feral's preferences
+# (GameOptionsDialogShouldShow, DisableAllMods, ExtraCommandLine). They are set for this launch only, and the changed
+# keys are put back when the game exits. Packs from --mods that aren't in TotalWarAttilaData/data are looked up in the
+# Steam Workshop folder and linked into data for the duration of the launch.
 
 root="$(cd "$(dirname "$0")" && pwd)"
 game="$root/Total War ATTILA.app/Contents/MacOS/Total War ATTILA"
 dylib="$root/TWASE/libTWASE.dylib"
+prefs="$HOME/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data"
 
-if [ ! -x "$game" ]; then
-    echo "Total War ATTILA not found at: $game" >&2
+die()
+{
+    echo "twase-launch: $*" >&2
     exit 1
+}
+
+skip_launcher=0
+mods_file=""
+save=""
+extra=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --skip-launcher) skip_launcher=1 ;;
+        --mods) [ $# -ge 2 ] || die "--mods needs a file"; mods_file="$2"; shift ;;
+        --load) [ $# -ge 2 ] || die "--load needs a save name"; save="$2"; skip_launcher=1; shift ;;
+        --extra) [ $# -ge 2 ] || die "--extra needs statements"; extra="$2"; shift ;;
+        -h|--help) sed -n '1d; /^#/!q; s/^# \{0,1\}//p' "$0"; exit 0 ;;
+        *) die "unknown option: $1 (see --help)" ;;
+    esac
+    shift
+done
+
+[ -x "$game" ] || die "Total War ATTILA not found at: $game"
+[ -f "$dylib" ] || die "TWASE not found at: $dylib"
+
+# Feral writes its preferences when the game quits, never edit them while it runs
+if pgrep -f "$game" >/dev/null 2>&1; then
+    die "Total War ATTILA is already running"
 fi
 
-if [ ! -f "$dylib" ]; then
-    echo "TWASE not found at: $dylib" >&2
-    exit 1
+# --- Feral preferences (XML, one <value name="..." type="...">text</value> per line) ---
+
+pref_exists()
+{
+    grep -q "<value name=\"$1\" type=" "$prefs"
+}
+
+# prints the stored (XML escaped) text of a value
+pref_get()
+{
+    sed -n "s|.*<value name=\"$1\" type=\"[a-z]*\">\([^<]*\)</value>.*|\1|p" "$prefs" | head -n 1
+}
+
+# sets a value to already XML escaped text
+pref_set()
+{
+    replacement=$(printf '%s' "$2" | sed 's/[\\|&]/\\&/g')
+    sed -i '' "s|\(<value name=\"$1\" type=\"[a-z]*\">\)[^<]*\(</value>\)|\1$replacement\2|" "$prefs"
+}
+
+xml_escape()
+{
+    printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'
+}
+
+changed_keys=""
+
+# remembers the original value once, then sets the new one
+override()
+{
+    pref_exists "$1" || die "'$1' not found in Feral's preferences, start the game once without options first"
+
+    case " $changed_keys " in
+        *" $1 "*) ;;
+        *)
+            eval "original_$1=\$(pref_get \"\$1\")"
+            changed_keys="$changed_keys $1"
+            ;;
+    esac
+
+    pref_set "$1" "$2"
+}
+
+restore()
+{
+    for key in $changed_keys; do
+        eval "pref_set \"\$key\" \"\$original_$key\""
+    done
+    changed_keys=""
+}
+
+# --- packs ---
+#
+# With DisableAllMods Feral empties its own mods folder, so the packs from the mod list are linked into the game's data
+# folder (always searched for "mod" entries) and the links are removed again when the game exits.
+
+data="$root/TotalWarAttilaData/data"
+workshop="$(cd "$root/../../workshop/content/325610" 2>/dev/null && pwd)"
+created_links=""
+
+link_pack()
+{
+    # already there (game pack, manually installed mod or a link from an earlier launch)
+    if [ -e "$data/$1" ] || [ -L "$data/$1" ]; then
+        return 0
+    fi
+
+    source=$(find "$workshop" -mindepth 2 -maxdepth 2 -iname "$1" 2>/dev/null | head -n 1)
+    [ -n "$source" ] || die "pack '$1' not found in $data or the Steam Workshop folder"
+
+    ln -s "$source" "$data/$1" || die "could not link '$1' into $data"
+    created_links="$created_links$1
+"
+}
+
+unlink_packs()
+{
+    printf '%s' "$created_links" | while IFS= read -r pack; do
+        [ -n "$pack" ] && [ -L "$data/$pack" ] && rm "$data/$pack"
+    done
+    created_links=""
+}
+
+statements=""
+
+if [ -n "$mods_file" ]; then
+    [ -f "$mods_file" ] || die "mod list not found: $mods_file"
+    # one line per statement, joined with spaces
+    statements=$(tr '\r\n' '  ' < "$mods_file" | sed 's/  */ /g; s/^ //; s/ $//')
+
+    # mod "name"; or mod name;
+    packs=$(tr ';' '\n' < "$mods_file" | sed -n 's/^[[:space:]]*mod[[:space:]][[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p')
+    [ -n "$packs" ] || die "no 'mod' entries in $mods_file"
+fi
+
+if [ -n "$save" ]; then
+    statements="$statements game_startup_mode campaign_load \"$save\";"
+fi
+
+if [ -n "$extra" ]; then
+    statements="$statements $extra"
+fi
+
+if [ "$skip_launcher" -eq 1 ] || [ -n "$mods_file" ] || [ -n "$statements" ]; then
+    [ -f "$prefs" ] || die "Feral's preferences not found, start the game once without options first"
+    trap 'restore; unlink_packs; exit 1' INT TERM HUP
+    trap 'restore; unlink_packs' EXIT
+
+    if [ -n "$mods_file" ]; then
+        # a here-document keeps the loop in this shell, so created_links survives
+        while IFS= read -r pack; do
+            link_pack "$pack"
+        done <<EOF
+$packs
+EOF
+    fi
+
+    if [ "$skip_launcher" -eq 1 ]; then
+        override GameOptionsDialogShouldShow 0
+    fi
+
+    # only the mods from the list, not the ones enabled in Feral's mod manager
+    if [ -n "$mods_file" ]; then
+        override DisableAllMods 1
+    fi
+
+    if [ -n "$statements" ]; then
+        override ExtraCommandLineEnabled 1
+        override ExtraCommandLine "$(xml_escape "${statements# }")"
+        echo "twase-launch: extra command line: ${statements# }"
+    fi
 fi
 
 cd "$root" || exit 1
-DYLD_INSERT_LIBRARIES="$dylib" exec "$game" "$@"
+
+if [ -z "$changed_keys" ]; then
+    DYLD_INSERT_LIBRARIES="$dylib" exec "$game"
+fi
+
+DYLD_INSERT_LIBRARIES="$dylib" "$game"
+status=$?
+
+# restore and unlink_packs run from the EXIT trap
+exit $status

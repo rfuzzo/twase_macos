@@ -88,7 +88,7 @@ Feral builds the engine command line itself; process arguments are not part of i
 | `DisableAllMods` = 1 | Feral appends no `mod` entries of its own |
 | `Launcher/mods` | Feral's mod list: `<pack> = <timestamp>|<enabled>|<order>` |
 
-Feral links every subscribed Workshop pack into `VFS/Local/mods` (lowercased names) on each launch, which the game sees as `<install>\mods`.
+With mods enabled, Feral links every subscribed Workshop pack into `VFS/Local/mods` (lowercased names) on each launch, which the game sees as `<install>\mods`. With `DisableAllMods = 1` it empties that folder, so `mod` entries from `ExtraCommandLine` only find packs in `TotalWarAttilaData/data` (where `twase-launch.command --mods` links them).
 
 ## Patches
 
