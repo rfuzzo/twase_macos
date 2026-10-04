@@ -201,6 +201,8 @@ bool Config::Save(const std::filesystem::path& aFile, std::string& aError)
         auto& dev = GetSection(config, "dev");
         SetValue(dev, "console", m_dev.hasConsole, "Mirror the log to stdout (visible when started from a terminal)");
         SetValue(dev, "wait_for_debugger", m_dev.waitForDebugger);
+        SetValue(dev, "trace_lua_loads", m_dev.traceLuaLoads,
+                 "Log every Lua chunk the game loads (needs logging.level = \"trace\")");
 
         // write to a temporary file first so a failed write doesn't destroy the config
         auto tempFile = aFile;
@@ -236,6 +238,7 @@ void Config::DevConfig::LoadV0(const toml::value& aConfig)
 {
     hasConsole = toml::find_or(aConfig, "dev", "console", hasConsole);
     waitForDebugger = toml::find_or(aConfig, "dev", "wait_for_debugger", waitForDebugger);
+    traceLuaLoads = toml::find_or(aConfig, "dev", "trace_lua_loads", traceLuaLoads);
 }
 
 void Config::ScriptConfig::LoadV0(const toml::value& aConfig)

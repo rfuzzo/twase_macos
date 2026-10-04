@@ -58,6 +58,7 @@ App::App()
 
     const auto& dev = m_config.GetDev();
     spdlog::debug("  dev.console: {}", dev.hasConsole);
+    spdlog::debug("  dev.trace_lua_loads: {}", dev.traceLuaLoads);
 
     const auto& loggingConfig = m_config.GetLogging();
     spdlog::debug("  logging.level: {}", spdlog::level::to_string_view(loggingConfig.level));
@@ -171,7 +172,12 @@ bool App::AttachHooks()
     VFS::Init(slide);
 
     auto success = Hooks::LuaLogHook::Attach();
-    success &= Hooks::LuaLoadTraceHook::Attach();
+
+    // developer option, an extra hook on every Lua chunk load
+    if (m_config.GetDev().traceLuaLoads)
+    {
+        success &= Hooks::LuaLoadTraceHook::Attach();
+    }
     success &= Hooks::GameTickHook::Attach();
     success &= Hooks::WinMainHook::Attach();
     success &= Hooks::RunStartupPathHook::Attach();

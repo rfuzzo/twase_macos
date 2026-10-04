@@ -15,6 +15,7 @@ public:
 
         bool hasConsole = false;
         bool waitForDebugger = false;
+        bool traceLuaLoads = false;
     };
 
     struct ScriptConfig
