@@ -49,6 +49,36 @@ constexpr uint64_t CName_ctor = 0x10109240C;
 // void (*)(void* ptr), the game allocator's free
 constexpr uint64_t tw_free = 0x1010ACB70;
 
+// DIPLOMACY
+// float (*)(void* deal, void* ctx, void* factionA, void* factionB)
+// UI-only wrapper around the deal evaluator (0x101d7b25c), AI accepts deals with score >= 0
+constexpr uint64_t Diplo_GetDisplayedDealScore = 0x101D7E890;
+
+// int (*)(void* caiModule, void* deal)
+// buckets the score: 2 low, 3 moderate, 4 high, thresholds are the tweakers
+// CAI_DIPLOMACY_NEGOTIATION_DISPLAYED_LIKELIHOOD_THRESHOLD_LOW/HIGH (-4 / 4, value at +0x64 of 0x105600378 / 0x1056003e0)
+constexpr uint64_t CAI_GetDealLikelihoodBucket = 0x102296A5C;
+
+// void* (*)(DiplomacyDropdown* self, int likelihood (-1/0/1, -2 hidden), bool show)
+constexpr uint64_t DiplomacyDropdown_SetLikelihood = 0x1035F4A1C;
+
+// UI
+// void (*)(UIComponent* self, const WString* text, bool allStates)
+constexpr uint64_t UIComponent_SetTooltipText = 0x1032D2418;
+
+// STRINGS
+// TempString* (*)(TempString* self, const char* utf8)
+constexpr uint64_t String_ctor = 0x10104CE1C;
+
+// void (*)(TempString* self)
+constexpr uint64_t String_dtor = 0x10104BA58;
+
+// WStringResult (*)(const TempString* src), returns through x8
+constexpr uint64_t String_ToUniString = 0x101049BB0;
+
+// void (*)(WString* self)
+constexpr uint64_t UniString_dtor = 0x101049D20;
+
 // PATCHES
 constexpr uint64_t BitSetCrashAddr = 0x101A51C58;
 

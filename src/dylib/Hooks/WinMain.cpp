@@ -3,6 +3,7 @@
 #include "WinMain.hpp"
 
 #include "../Hooking/Hook.hpp"
+#include "../Utils.hpp"
 
 #include "../../sdk/Attila/Addresses.hpp"
 
@@ -10,52 +11,6 @@ namespace
 {
 int64_t WinMain(void* aInstance, void* aPrevInstance, const char16_t* aCommandLine);
 Hook<decltype(&WinMain)> WinMain_fnc(sdk::Attila::Addresses::WinMain, &WinMain);
-
-std::string ToUtf8(const char16_t* aText)
-{
-    std::string result;
-    if (!aText)
-    {
-        return result;
-    }
-
-    for (; *aText; ++aText)
-    {
-        uint32_t c = *aText;
-
-        // surrogate pair
-        if (c >= 0xD800 && c <= 0xDBFF && aText[1] >= 0xDC00 && aText[1] <= 0xDFFF)
-        {
-            c = 0x10000 + ((c - 0xD800) << 10) + (aText[1] - 0xDC00);
-            ++aText;
-        }
-
-        if (c < 0x80)
-        {
-            result += static_cast<char>(c);
-        }
-        else if (c < 0x800)
-        {
-            result += static_cast<char>(0xC0 | (c >> 6));
-            result += static_cast<char>(0x80 | (c & 0x3F));
-        }
-        else if (c < 0x10000)
-        {
-            result += static_cast<char>(0xE0 | (c >> 12));
-            result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-            result += static_cast<char>(0x80 | (c & 0x3F));
-        }
-        else
-        {
-            result += static_cast<char>(0xF0 | (c >> 18));
-            result += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
-            result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-            result += static_cast<char>(0x80 | (c & 0x3F));
-        }
-    }
-
-    return result;
-}
 
 void LogMods(std::string_view aCommandLine)
 {
@@ -99,7 +54,7 @@ void LogMods(std::string_view aCommandLine)
 
 int64_t WinMain(void* aInstance, void* aPrevInstance, const char16_t* aCommandLine)
 {
-    auto commandLine = ToUtf8(aCommandLine);
+    auto commandLine = Utils::ToUtf8(aCommandLine);
     spdlog::info("Game command line: {}", commandLine);
     LogMods(commandLine);
 

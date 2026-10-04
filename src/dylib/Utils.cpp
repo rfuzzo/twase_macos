@@ -65,6 +65,52 @@ std::string Utils::FormatCurrentTimestamp()
                        tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
 
+std::string Utils::ToUtf8(const char16_t* aText, size_t aLength)
+{
+    std::string result;
+    if (!aText)
+    {
+        return result;
+    }
+
+    for (size_t i = 0; i < aLength && aText[i]; ++i)
+    {
+        uint32_t c = aText[i];
+
+        // surrogate pair
+        if (c >= 0xD800 && c <= 0xDBFF && i + 1 < aLength && aText[i + 1] >= 0xDC00 && aText[i + 1] <= 0xDFFF)
+        {
+            c = 0x10000 + ((c - 0xD800) << 10) + (aText[i + 1] - 0xDC00);
+            ++i;
+        }
+
+        if (c < 0x80)
+        {
+            result += static_cast<char>(c);
+        }
+        else if (c < 0x800)
+        {
+            result += static_cast<char>(0xC0 | (c >> 6));
+            result += static_cast<char>(0x80 | (c & 0x3F));
+        }
+        else if (c < 0x10000)
+        {
+            result += static_cast<char>(0xE0 | (c >> 12));
+            result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+            result += static_cast<char>(0x80 | (c & 0x3F));
+        }
+        else
+        {
+            result += static_cast<char>(0xF0 | (c >> 18));
+            result += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
+            result += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+            result += static_cast<char>(0x80 | (c & 0x3F));
+        }
+    }
+
+    return result;
+}
+
 void Utils::ShowMessageBox(const std::string_view aText, bool aIsError)
 {
     // CFUserNotification works from any thread and before NSApplication exists (we run before main)

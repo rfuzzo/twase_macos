@@ -1,6 +1,6 @@
 # TWASE macOS port – plan
 
-Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Phase 4 (mod loader) works for loose mods. Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
+Status: 2026-10-03. Phases 0–3 done: the dylib injects, patches, captures the Lua log, and the in-game Lua console works in the frontend and in campaign. Phase 4 (mod loader) and Phase 5 (diplomacy tweak, unit-size patch) work. Next: Phase 6 (release). Target build: Feral *Total War: ATTILA* 1.6.1 RC2 (`CFBundleVersion 480285.103778`, Steam).
 
 ## 1. What we are porting *to* (findings)
 
@@ -134,7 +134,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 - [x] Metal + input hooks; port `LuaConsole` and `Commands`. Works in frontend and campaign (battle not tested yet).
 - [x] **Threading (differs from PC):** game Lua runs on the `WinMain` thread, the overlay on the render thread. Console commands and the context list are queued and run in a hook on the per-frame `GameTick` (`0x1010ecd24`). The overlay only reads cached results.
-- [ ] `TweaksTab`: placeholder until the diplomacy tweak (Phase 5).
+- [x] `TweaksTab` with the diplomacy toggle (saved to `config.ini`).
 
 ### Phase 4: mod loader
 
@@ -144,7 +144,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 
 ### Phase 5: tweaks + patches
 
-- [ ] Diplomacy deal-score tooltip (char16_t `WString`, new UI offsets).
+- [x] Diplomacy deal-score tooltip: all functions and offsets found (see `docs/addresses.md`), tested in the game. Lesson: hooks must not use `App::Get()` from the `App` constructor, hooking now runs in `App::Initialize()`.
 - [x] Unit-size patch: the same bitset<64> throw exists on Mac. TWASE applies the one-instruction `b.eq` retarget at `0x101a51c58`. 2026-10-04: a Fireforged Empire save loads and plays fine with the patch (whether the >64 case was hit isn't logged).
 - [x] Mod list logging: the `WinMain` hook logs the engine command line and the enabled mods.
 - [ ] Start the game with mods from the launcher script (to test the unit-size patch with Fireforged). Findings so far (2026-10-03):

@@ -19,6 +19,8 @@ public:
 private:
     App();
 
+    void Initialize();
+
     bool AttachHooks();
 
     Paths m_paths;

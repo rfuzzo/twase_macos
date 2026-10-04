@@ -133,6 +133,27 @@ Tested 2026-10-04:
 
 The game's `require` names chunks `q:\feral\users\default\appdata\roaming\the creative assembly\attila\maps\<path>` (it looks in that user folder first), but the content comes from the VFS (data / packs).
 
-## Still to find
+## Diplomacy deal score (PC `DiplomacyLikelihood`)
 
-Diplomacy and UI functions/offsets (Phase 5).
+| Name | PC RVA | Mac VA | Found via |
+|---|---|---|---|
+| CAI_GetDealLikelihoodBucket | `0xD2A7A0` | `0x102296a5c` | the only reader of the tweakers `CAI_DIPLOMACY_NEGOTIATION_DISPLAYED_LIKELIHOOD_THRESHOLD_LOW/HIGH` (objects `0x105600378` / `0x1056003e0`, created in `mod_init_func_1061`, float value at `+0x64`, defaults -4 / 4). `int (caiModule, deal)`, returns 2 low / 3 moderate / 4 high |
+| Diplo_GetDisplayedDealScore | `0xA6E980` | `0x101d7e890` | called by the bucket function: `float (deal, *(cai + 0x788), factionA, factionB)`, thin wrapper around the evaluator `0x101d7b25c` |
+| DiplomacyDropdown_SetLikelihood | `0x14F95A0` | `0x1035f4a1c` | sets `dy_chance`'s state to `"low"` / `"moderate"` / `"high"`, -2 hidden |
+| UIComponent_SetTooltipText | `0x13B9A00` | `0x1032d2418` | the `SetTooltipText` Lua binding (`0x1032f9188`, UIComponent binding table at `0x105001120`) |
+| UIComponent_SetState | – | `0x1032d1b08` | |
+| UIComponent_FindChild | – | `0x1032d4f88` | `(parent, name, recursive)` |
+| String_ctor / String_dtor | – | `0x10104ce1c` / `0x10104ba58` | `CA::String` from UTF-8 |
+| String_ToUniString | (PC: `WString_ctor` `0xDFEF0`) | `0x101049bb0` | `CA::UniString` **returned by value through x8**; TWASE declares the return type with a non-trivial destructor so clang uses x8 too |
+| UniString_dtor | `0xE0720` | `0x101049d20` | |
+
+| Offset | PC | Mac | Found via |
+|---|---|---|---|
+| DiplomacyDropdown → `dy_chance` | `0xBC` | `0x160` | DiplomacyDropdown init `0x1035ec3a0` (`tx_likelihood of success` at `0x158`) |
+| UIComponent → current UIState | `0xB4` | `0x140` | `GetTooltipText` / `CurrentState` Lua bindings (`0x1032f9384` / `0x1032f8fd4`) |
+| UIComponent → tooltip | `0x118` | `0x1c0` | same |
+| UIState → tooltip | `0x44` | `0x60` | same; state name at `0x20` |
+
+`CA::UniString` = `{u32 length, u32 capacity, char16_t* data}`, the data has an allocation header in front.
+
+Tested 2026-10-04: the "Likelihood of success" tooltip shows the deal score (e.g. -12.35 → low, 0.71 → moderate); forced likelihoods (gifts) get no score.

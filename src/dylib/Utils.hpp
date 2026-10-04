@@ -14,6 +14,9 @@ std::shared_ptr<spdlog::logger> CreateLogger(const std::string_view aLogName, co
 
 std::string FormatCurrentTimestamp();
 
+// UTF-16 (game strings) to UTF-8, aLength in code units or npos for null terminated
+std::string ToUtf8(const char16_t* aText, size_t aLength = std::string::npos);
+
 void ShowMessageBox(const std::string_view aText, bool aIsError);
 
 template<typename... Args>

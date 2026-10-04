@@ -6,6 +6,7 @@
 #include "Version.hpp"
 #include "Patches/Patches.hpp"
 
+#include "Hooks/DiplomacyLikelihood.hpp"
 #include "Hooks/GameTick.hpp"
 #include "Hooks/LuaLoadTrace.hpp"
 #include "Hooks/MetalHook.hpp"
@@ -94,7 +95,12 @@ App::App()
         spdlog::debug("  [{}]: {}", i, argv[i]);
     }
 
-    if (!image->IsSupported())
+}
+
+// separate from the constructor, hooks may use App::Get() which is only set after construction
+void App::Initialize()
+{
+    if (!Image::Get()->IsSupported())
     {
         spdlog::error("This game build is not supported (expected UUID {}), TWASE will not hook anything",
                       sdk::Attila::Addresses::SupportedUUID);
@@ -117,6 +123,7 @@ App::App()
 void App::Construct()
 {
     g_app.reset(new App());
+    g_app->Initialize();
 }
 
 void App::Destruct()
@@ -168,6 +175,7 @@ bool App::AttachHooks()
     success &= Hooks::GameTickHook::Attach();
     success &= Hooks::WinMainHook::Attach();
     success &= Hooks::RunStartupPathHook::Attach();
+    success &= Hooks::DiplomacyLikelihoodHook::Attach();
 
     // the console is optional, TWASE still works without it
     if (!Hooks::MetalHook::Attach())
