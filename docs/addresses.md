@@ -79,7 +79,7 @@ Threads: Feral runs CA's `WinMain` on a secondary thread named `WinMain`, and **
 | AppendModsToCommandLine | `0x100014f1c` | Feral: unless `DisableAllMods`, appends `mod <pack>;` for each enabled mod |
 | AppendCommandLine | `0x100c36ccc` | appends a statement (space separated) to the global command line string `0x10506c7b0` |
 
-Feral does **not** forward process arguments to the engine command line. Passing `mod_list.txt;` (Runcher style) made startup stall before `WinMain`.
+Feral does **not** forward process arguments to the engine command line. With an extra argument (e.g. Runcher's `mod_list.txt;`), Feral opens its pre-launcher (mod manager) and waits there; without arguments it starts the game directly.
 
 ## Patches
 
