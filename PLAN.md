@@ -156,6 +156,7 @@ Feral updates are rare. **Hardcoded offset tables keyed by `LC_UUID` are enough 
 ### Phase 6: release
 
 - [x] GitHub Actions on `macos-15` (arm64): build, ad-hoc sign, zip `TWASE/libTWASE.dylib` + launcher; nightly on `main`, versioned release on `v*` tags (tag must match `TWASE_VERSION_STR`), as on PC. Packaging dry-run passed locally.
+- [x] Steam integration (2026-10-05): `twase-launch.command` works as a Steam launch option (`"<game folder>/twase-launch.command" %command%`). Steam passes the `.app` for `%command%`; macOS strips `DYLD_*` on the way through `/bin/sh`, so the launcher takes Steam's libraries (steamloader, overlay) from `STEAM_DYLD_INSERT_LIBRARIES` and adds TWASE after them. Tested: console and Steam overlay both work. Lesson: overwriting a dylib in place (same inode) makes the kernel kill the game with "Code Signature Invalid / Invalid Page" (cached signature); the xmake deploy now copies to a temp file and renames it.
 - [x] README for players: install, quarantine removal, launcher options, console, mod locations, config, troubleshooting.
   - Tested: a quarantined (downloaded) dylib is refused ("library load disallowed by system policy") and the game aborts. The launcher now removes the quarantine from `TWASE/` itself; the README has a one-time `xattr` command for the launcher script.
 - [x] First CI run on GitHub (green, nightly published), released as `v1.0.0` (own versioning, feature parity with TWASE v1.0.0 for Windows).

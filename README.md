@@ -29,11 +29,15 @@ A script extender for **Total War: ATTILA** on Mac, the macOS version of [TWASE]
 
 ## Playing
 
-Start Steam, then double-click `twase-launch.command` in the game folder. The game starts as usual, with TWASE loaded.
+To load TWASE when you press *Play* in Steam, set the game's launch options once: in Steam, right-click *Total War: ATTILA* → *Properties* → *General* → *Launch Options*, and enter (with your game folder):
 
-> Starting the game with Steam's *Play* button does not load TWASE.
+```text
+"/Users/<you>/Library/Application Support/Steam/steamapps/common/Total War Attila/twase-launch.command" %command%
+```
 
-The launcher can also start the game directly, without Feral's launcher window (run it in Terminal from the game folder):
+Or start Steam and double-click `twase-launch.command` in the game folder.
+
+The launcher can also start the game directly, without Feral's launcher window. Put the options in front of `%command%` in the launch options, or run it in Terminal from the game folder:
 
 | Option | Description |
 | --- | --- |
@@ -85,6 +89,7 @@ diplomacy_deal_score = true
 ## Troubleshooting
 
 - **"Apple could not verify … is free of malware"**: run the Terminal command from step 4 of the installation, then start again.
+- **The game closes right away after updating TWASE** (crash report: "Code Signature Invalid"): macOS still remembers the old file. Delete the `TWASE` folder and extract the new one, instead of overwriting the files.
 - **A modded save crashes while loading**: make sure the mods are enabled in Feral's launcher window (*Disable all mods* must be off), or use `--mods`.
 - **Something else**: open an [issue](https://github.com/rfuzzo/twase_macos/issues) and attach the newest file from `TWASE/logs`.
 

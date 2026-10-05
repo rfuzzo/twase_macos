@@ -2,27 +2,40 @@
 # Starts Total War: ATTILA with TWASE injected. Steam must be running.
 # Lives in the game root, next to "Total War ATTILA.app" and the TWASE folder.
 #
-# Usage: twase-launch.command [--skip-launcher] [--mods <mod_list.txt>] [--load <save>] [--extra "<statements>"]
+# Usage: twase-launch.command [--skip-launcher] [--mods <mod_list.txt>] [--load <save>] [--extra "<statements>"] [<game> [args]]
 #
 #   --skip-launcher   start the game directly, without Feral's pre-launcher
 #   --mods <file>     load exactly the mods in a Runcher style mod list (lines like: mod "@my_mod.pack";)
 #                     instead of the mods enabled in Feral's mod manager
 #   --load <save>     load a campaign save on startup, e.g. --load "Saxons 395 AD Spring.save" (implies --skip-launcher)
 #   --extra <text>    append raw statements to the game's command line
+#   <game> [args]     the game to start (the .app or its executable), for Steam's launch options:
+#                     "<game folder>/twase-launch.command" %command%
 #
 # The game ignores its process arguments on macOS, so these options go through Feral's preferences
 # (GameOptionsDialogShouldShow, DisableAllMods, ExtraCommandLine). They are set for this launch only, and the changed
 # keys are put back when the game exits. Packs from --mods that aren't in TotalWarAttilaData/data are looked up in the
 # Steam Workshop folder and linked into data for the duration of the launch.
+#
+# Steam's own libraries (overlay) stay injected: macOS strips DYLD_* variables on the way through /bin/sh, so they are
+# taken from STEAM_DYLD_INSERT_LIBRARIES, which Steam sets for exactly that. Each launch is logged to
+# TWASE/logs/twase-launch.log.
 
 root="$(cd "$(dirname "$0")" && pwd)"
 game="$root/Total War ATTILA.app/Contents/MacOS/Total War ATTILA"
 dylib="$root/TWASE/libTWASE.dylib"
 prefs="$HOME/Library/Application Support/Feral Interactive/Total War ATTILA/Preferences Data"
 
+log()
+{
+    echo "twase-launch: $*"
+    mkdir -p "$root/TWASE/logs" 2>/dev/null
+    printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$root/TWASE/logs/twase-launch.log" 2>/dev/null
+}
+
 die()
 {
-    echo "twase-launch: $*" >&2
+    log "error: $*" >&2
     exit 1
 }
 
@@ -38,10 +51,21 @@ while [ $# -gt 0 ]; do
         --load) [ $# -ge 2 ] || die "--load needs a save name"; save="$2"; skip_launcher=1; shift ;;
         --extra) [ $# -ge 2 ] || die "--extra needs statements"; extra="$2"; shift ;;
         -h|--help) sed -n '1d; /^#/!q; s/^# \{0,1\}//p' "$0"; exit 0 ;;
-        *) die "unknown option: $1 (see --help)" ;;
+        -*) die "unknown option: $1 (see --help)" ;;
+        *) break ;;
     esac
     shift
 done
+
+# the rest is the game command (Steam's %command%), anything after the game is passed to it
+log "started (args: $*, from Steam: $([ -n "$SteamAppId" ] && echo yes || echo no))"
+if [ $# -gt 0 ]; then
+    case "$1" in
+        *.app|*.app/) game="${1%/}/Contents/MacOS/Total War ATTILA" ;;
+        *) game="$1" ;;
+    esac
+    shift
+fi
 
 [ -x "$game" ] || die "Total War ATTILA not found at: $game"
 [ -f "$dylib" ] || die "TWASE not found at: $dylib"
@@ -190,13 +214,22 @@ EOF
     fi
 fi
 
+# keep Steam's libraries (steamloader, overlay) in front of TWASE
+steam_libs="${STEAM_DYLD_INSERT_LIBRARIES:-$DYLD_INSERT_LIBRARIES}"
+case "$steam_libs" in
+    *libTWASE.dylib*) inject="$steam_libs" ;;
+    "") inject="$dylib" ;;
+    *) inject="$steam_libs:$dylib" ;;
+esac
+log "starting $game with DYLD_INSERT_LIBRARIES=$inject"
+
 cd "$root" || exit 1
 
 if [ -z "$changed_keys" ]; then
-    DYLD_INSERT_LIBRARIES="$dylib" exec "$game"
+    DYLD_INSERT_LIBRARIES="$inject" exec "$game" "$@"
 fi
 
-DYLD_INSERT_LIBRARIES="$dylib" "$game"
+DYLD_INSERT_LIBRARIES="$inject" "$game" "$@"
 status=$?
 
 # restore and unlink_packs run from the EXIT trap

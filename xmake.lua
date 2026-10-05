@@ -72,8 +72,13 @@ target("twase")
         local destdir = path.join(gameroot, "TWASE")
         os.mkdir(destdir)
 
+        -- Copy to a temporary file and rename it over the old one. Overwriting a dylib in place keeps its inode, the
+        -- kernel then still has the old code signature cached for it and kills the game with "Code Signature Invalid".
         local dylib = target:targetfile()
-        os.cp(dylib, destdir)
+        local dest = path.join(destdir, path.filename(dylib))
+        local temp = dest .. ".tmp"
+        os.cp(dylib, temp)
+        os.mv(temp, dest)
         print(string.format("[twase] Copied %s -> %s", dylib, destdir))
 
         local launcher = path.join(os.projectdir(), "scripts", "twase-launch.command")
